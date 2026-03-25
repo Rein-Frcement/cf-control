@@ -22,14 +22,14 @@ class DroneTester(Node):
         now = self.get_clock().now()
         elapsed = (now - self.start_time).nanoseconds / 1e9
 
-        if elapsed < 2.0:
-            msg.collective_thrust = 0.0
+        if elapsed < 5.0:
+            msg.collective_thrust = 5.0
             msg.torque.x = 0.0
             msg.torque.y = 0.0
             msg.torque.z = 0.0
-        elif elapsed < 5.0:
-            msg.collective_thrust = 12.0
-            msg.torque.x = 0.1
+        elif elapsed < 15.0:
+            msg.collective_thrust = 22.0
+            msg.torque.x = 0.0
             msg.torque.y = 0.0
             msg.torque.z = 0.0
         else:

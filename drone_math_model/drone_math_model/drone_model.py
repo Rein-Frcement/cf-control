@@ -1,9 +1,10 @@
 import numpy as np
 import rclpy
-from cf_control_msgs.msg import ThrustAndTorque
 from numpy.linalg import inv
 from rclpy.node import Node
 from std_msgs.msg import Float64MultiArray
+
+from cf_control_msgs.msg import ThrustAndTorque
 
 
 def quaternion_multiply(q1, q2):
@@ -36,15 +37,27 @@ class DroneNode(Node):
 
         self.publisher_ = self.create_publisher(Float64MultiArray, 'drone_state', 10)
 
-        self.m = 1.0
-        self.g_vec = np.array([0, 0, 9.81])
-        self.J = np.diag([1.0, 1.0, 1.0])
+        self.declare_parameter('mass', 1.0)
+        self.declare_parameter('gravity', 9.81)
+        self.declare_parameter('inertia', [1.0, 1.0, 1.0])
+        self.declare_parameter('initial_position', [0.0, 0.0, 0.0])
+        self.declare_parameter('initial_velocity', [0.0, 0.0, 0.0])
+        self.declare_parameter('initial_quaternion', [1.0, 0.0, 0.0, 0.0])
+        self.declare_parameter('initial_omega', [0.0, 0.0, 0.0])
+
+        self.m = self.get_parameter('mass').value
+        g = self.get_parameter('gravity').value
+        J_diag = self.get_parameter('inertia').value
+
+        self.g_vec = np.array([0.0, 0.0, g])
+        self.J = np.diag(J_diag)
         self.J_inv = inv(self.J)
 
-        self.r = np.zeros(3)
-        self.v = np.zeros(3)
-        self.q = np.array([1.0, 0.0, 0.0, 0.0])
-        self.omega = np.zeros(3)
+        self.r = np.array(self.get_parameter('initial_position').value)
+        self.v = np.array(self.get_parameter('initial_velocity').value)
+        self.q = np.array(self.get_parameter('initial_quaternion').value)
+        self.q = self.q / np.linalg.norm(self.q)
+        self.omega = np.array(self.get_parameter('initial_omega').value)
 
         self.last_timestamp = None
 
