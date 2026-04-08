@@ -1,9 +1,8 @@
 import numpy as np
 import rclpy
-from numpy.linalg import inv
 from rclpy.node import Node
-from std_msgs.msg import Float64MultiArray
-from cf_control_msgs.msg import Flat, ThrustAndTorque
+
+from cf_control_msgs.msg import DroneOutput, DroneParameters, Flat
 
 
 def rotation_matrix_to_quat(R):
@@ -45,26 +44,29 @@ def rotation_matrix_to_quat(R):
 
 class DroneNode(Node):
     def __init__(self):
-        super().__init__("drone_flat_to_state_and_torque_node")
+        super().__init__('drone_flat_to_state_and_torque_node')
 
-        self.subscription = self.create_subscription(
-            Flat, "drone_flat_input", self.listener_callback, 10
+        self.flat_subscription = self.create_subscription(
+            Flat, 'drone_flat_input', self.listener_callback, 10
+        )
+        self.params_subscription = self.create_subscription(
+            DroneParameters, 'drone_parameters', self.parameters_callback, 10
         )
 
-        self.state_publisher = self.create_publisher(
-            Float64MultiArray, "drone_state_output", 10
-        )
-        self.torque_publisher = self.create_publisher(
-            ThrustAndTorque, "drone_thrust_torque_output", 10
-        )
+        self.output_publisher = self.create_publisher(DroneOutput, 'drone_output', 10)
 
-        self.declare_parameter("mass", 1.0)
-        self.declare_parameter("gravity", 9.81)
-        self.declare_parameter("inertia", [0.01, 0.01, 0.02])
+        self.declare_parameter('mass', 1.0)
+        self.declare_parameter('gravity', 9.81)
+        self.declare_parameter('inertia', [0.01, 0.01, 0.02])
 
-        self.m = self.get_parameter("mass").value
-        self.g = self.get_parameter("gravity").value
-        self.J = np.diag(self.get_parameter("inertia").value)
+        self.m = self.get_parameter('mass').value
+        self.g = self.get_parameter('gravity').value
+        self.J = np.diag(self.get_parameter('inertia').value)
+
+    def parameters_callback(self, msg):
+        self.m = msg.in_mass
+        self.g = msg.in_gravity
+        self.J = np.diag([msg.in_i_xx, msg.in_i_yy, msg.in_i_zz])
 
     def listener_callback(self, msg):
         pos = np.array([msg.position.x, msg.position.y, msg.position.z])
@@ -92,9 +94,7 @@ class DroneNode(Node):
         q = rotation_matrix_to_quat(R)
 
         h_omega = (
-            (self.m / thrust) * (jerk - np.dot(zb, jerk) * zb)
-            if thrust > 1e-6
-            else np.zeros(3)
+            (self.m / thrust) * (jerk - np.dot(zb, jerk) * zb) if thrust > 1e-6 else np.zeros(3)
         )
         wx = -np.dot(h_omega, yb)
         wy = np.dot(h_omega, xb)
@@ -118,17 +118,25 @@ class DroneNode(Node):
         alpha = np.array([alphax, alphay, alphaz])
         torque = self.J @ alpha + np.cross(omega, self.J @ omega)
 
-        state_msg = Float64MultiArray()
-        state_msg.data = np.concatenate([pos, vel, q, omega]).tolist()
-        self.state_publisher.publish(state_msg)
-
-        tt_msg = ThrustAndTorque()
-        tt_msg.timestamp = msg.timestamp
-        tt_msg.collective_thrust = thrust
-        tt_msg.torque.x = torque[0]
-        tt_msg.torque.y = torque[1]
-        tt_msg.torque.z = torque[2]
-        self.torque_publisher.publish(tt_msg)
+        out_msg = DroneOutput()
+        out_msg.out_pos_x = pos[0]
+        out_msg.out_pos_y = pos[1]
+        out_msg.out_pos_z = pos[2]
+        out_msg.out_quat_w = q[0]
+        out_msg.out_quat_x = q[1]
+        out_msg.out_quat_y = q[2]
+        out_msg.out_quat_z = q[3]
+        out_msg.out_vel_x = vel[0]
+        out_msg.out_vel_y = vel[1]
+        out_msg.out_vel_z = vel[2]
+        out_msg.out_omega_x = omega[0]
+        out_msg.out_omega_y = omega[1]
+        out_msg.out_omega_z = omega[2]
+        out_msg.out_thrust = thrust
+        out_msg.out_torque_x = torque[0]
+        out_msg.out_torque_y = torque[1]
+        out_msg.out_torque_z = torque[2]
+        self.output_publisher.publish(out_msg)
 
 
 def main(args=None):
@@ -143,5 +151,5 @@ def main(args=None):
         rclpy.shutdown()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

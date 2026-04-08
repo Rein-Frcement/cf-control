@@ -13,6 +13,8 @@ find_package(geometry_msgs REQUIRED)
 set(msg_files
   "msg/ThrustAndTorque.msg"
   "msg/Flat.msg"
+  "msg/DroneParameters.msg"
+  "msg/DroneOutput.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
