@@ -5,6 +5,7 @@
     "service": "workspace",
     "workspaceFolder": "/home/developer/ros2_ws/src",
     "shutdownAction": "stopCompose",
+    "name": "cf-zajda-dont-touch",
     "customizations": {
         "vscode": {
             "settings": {

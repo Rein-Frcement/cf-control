@@ -1,7 +1,7 @@
 services:
   workspace:
     build: .
-    container_name: cf-container
+    container_name: cf-container-zajda-dont-touch
     ipc: host
     network_mode: host
     privileged: true
