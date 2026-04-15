@@ -15,6 +15,7 @@ set(msg_files
   "msg/Flat.msg"
   "msg/DroneParameters.msg"
   "msg/DroneOutput.msg"
+  "msg/ContorlerParameters.msg"
 )
 
 rosidl_generate_interfaces(${PROJECT_NAME}
