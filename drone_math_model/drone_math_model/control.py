@@ -26,10 +26,10 @@ class Controller(Node):
         )
 
     def regulator_parameters_callback(self, msg):
-        self.Kp = np.diag([msg.Kp, msg.Kp, msg.Kp])
-        self.Kv = np.diag([msg.Kv, msg.Kv, msg.Kv])
-        self.KR = np.diag([msg.KR, msg.KR, msg.KR])
-        self.Kw = np.diag([msg.Kw, msg.Kw, msg.Kw])
+        self.Kp = np.diag([msg.kp, msg.kp, msg.kp])
+        self.Kv = np.diag([msg.kv, msg.kv, msg.kv])
+        self.KR = np.diag([msg.kr, msg.kr, msg.kr])
+        self.Kw = np.diag([msg.kw, msg.kw, msg.kw])
 
     def state_callback(self, msg):
         self.current_pos = np.array([msg.position.x, msg.position.y, msg.position.z])

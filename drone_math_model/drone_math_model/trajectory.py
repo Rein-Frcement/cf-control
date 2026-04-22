@@ -66,10 +66,10 @@ class TrajectoryPublisher(Node):
         self.trajectory_publisher.publish(trajectory_msg)
 
         regulator_msg = ContorlerParameters()
-        regulator_msg.Kp = Vector3(x=4.0, y=4.0, z=4.0)
-        regulator_msg.Kv = Vector3(x=2.0, y=2.0, z=2.0)
-        regulator_msg.KR = Vector3(x=2.0, y=2.0, z=2.0)
-        regulator_msg.Kw = Vector3(x=0.15, y=0.15, z=0.15)
+        regulator_msg.kp = Vector3(x=4.0, y=4.0, z=4.0)
+        regulator_msg.kv = Vector3(x=2.0, y=2.0, z=2.0)
+        regulator_msg.kr = Vector3(x=2.0, y=2.0, z=2.0)
+        regulator_msg.kw = Vector3(x=0.15, y=0.15, z=0.15)
 
         self.regulator_publisher.publish(regulator_msg)
 
