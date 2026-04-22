@@ -10,7 +10,7 @@ setup(
         ('share/ament_index/resource_index/packages', ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools', 'numpy', 'rclpy'],
     zip_safe=True,
     maintainer='developer',
     maintainer_email='rein.forcement.ligma@gmain.com',
@@ -26,6 +26,7 @@ setup(
             'drone_model = drone_math_model.drone_model:main',
             'drone_model_test = drone_math_model.drone_tester:main',
             'drone_flat_to_state_and_torque_node = drone_math_model.drone_flat_to_state:main',
+            'drone_trajectory_publisher = drone_math_model.trajectory:main',
         ],
     },
 )
