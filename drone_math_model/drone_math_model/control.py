@@ -1,4 +1,5 @@
 import numpy as np
+import rclpy
 from rclpy.node import Node
 
 from cf_control_msgs.msg import ContorlerParameters, Flat, ThrustAndTorque
