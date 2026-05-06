@@ -32,7 +32,7 @@ class DroneNode(Node):
         super().__init__('drone_node')
 
         self.subscription = self.create_subscription(
-            ThrustAndTorque, 'drone_control', self.listener_callback, 10
+            ThrustAndTorque, '/cf_control/control_command', self.listener_callback, 10
         )
 
         self.publisher_ = self.create_publisher(Float64MultiArray, 'drone_state', 10)

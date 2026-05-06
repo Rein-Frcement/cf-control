@@ -1,5 +1,3 @@
-import math
-
 import rclpy
 from geometry_msgs.msg import Vector3
 from rclpy.node import Node
@@ -17,47 +15,42 @@ class TrajectoryPublisher(Node):
         )
 
         self.start_time = self.get_clock().now()
+        self.startup_delay = 10.0
+        self.started = False
         self.timer = self.create_timer(0.1, self.publish_messages)
 
-        self.get_logger().info('drone_trajectory_publisher node started')
+        self.get_logger().info(
+            'drone_trajectory_publisher node started, waiting 10s before sending commands'
+        )
 
     def publish_messages(self):
         t = (self.get_clock().now() - self.start_time).nanoseconds * 1e-9
+        if t < self.startup_delay:
+            if not self.started:
+                self.get_logger().info(
+                    f'Waiting {self.startup_delay:.0f}s before starting motor commands '
+                    f'(time={t:.1f}s)'
+                )
+                self.started = True
+            return
+
         trajectory_msg = Flat()
         trajectory_msg.timestamp = self.get_clock().now().nanoseconds
 
-        amplitude = 0.5
-        omega = 0.5
+        ascend_time = 20.0
+        target_altitude = 1.2
+        initial_altitude = 1.0
+        climb_rate = (target_altitude - initial_altitude) / ascend_time
 
-        trajectory_msg.position = Vector3(
-            x=amplitude * math.sin(omega * t),
-            y=amplitude * math.cos(omega * t),
-            z=1.0,
-        )
+        z = initial_altitude + climb_rate * t
+        zdot = climb_rate
+        zddot = 0.0
 
-        trajectory_msg.velocity = Vector3(
-            x=amplitude * omega * math.cos(omega * t),
-            y=-amplitude * omega * math.sin(omega * t),
-            z=0.0,
-        )
-
-        trajectory_msg.acceleration = Vector3(
-            x=-amplitude * omega**2 * math.sin(omega * t),
-            y=-amplitude * omega**2 * math.cos(omega * t),
-            z=0.0,
-        )
-
-        trajectory_msg.jerk = Vector3(
-            x=-amplitude * omega**3 * math.cos(omega * t),
-            y=amplitude * omega**3 * math.sin(omega * t),
-            z=0.0,
-        )
-
-        trajectory_msg.snap = Vector3(
-            x=amplitude * omega**4 * math.sin(omega * t),
-            y=amplitude * omega**4 * math.cos(omega * t),
-            z=0.0,
-        )
+        trajectory_msg.position = Vector3(x=0.0, y=0.0, z=z)
+        trajectory_msg.velocity = Vector3(x=0.0, y=0.0, z=zdot)
+        trajectory_msg.acceleration = Vector3(x=0.0, y=0.0, z=zddot)
+        trajectory_msg.jerk = Vector3(x=0.0, y=0.0, z=0.0)
+        trajectory_msg.snap = Vector3(x=0.0, y=0.0, z=0.0)
 
         trajectory_msg.yaw = 0.0
         trajectory_msg.yaw_dot = 0.0
@@ -66,10 +59,10 @@ class TrajectoryPublisher(Node):
         self.trajectory_publisher.publish(trajectory_msg)
 
         regulator_msg = ContorlerParameters()
-        regulator_msg.kp = Vector3(x=4.0, y=4.0, z=4.0)
-        regulator_msg.kv = Vector3(x=2.0, y=2.0, z=2.0)
-        regulator_msg.kr = Vector3(x=2.0, y=2.0, z=2.0)
-        regulator_msg.kw = Vector3(x=0.15, y=0.15, z=0.15)
+        regulator_msg.kp = Vector3(x=1.0, y=1.0, z=1.5)
+        regulator_msg.kv = Vector3(x=0.5, y=0.5, z=0.8)
+        regulator_msg.kr = Vector3(x=0.1, y=0.1, z=0.1)
+        regulator_msg.kw = Vector3(x=0.01, y=0.01, z=0.01)
 
         self.regulator_publisher.publish(regulator_msg)
 
