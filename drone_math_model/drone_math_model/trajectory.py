@@ -1,3 +1,5 @@
+import math
+
 import rclpy
 from geometry_msgs.msg import Vector3
 from rclpy.node import Node
@@ -37,20 +39,53 @@ class TrajectoryPublisher(Node):
         trajectory_msg = Flat()
         trajectory_msg.timestamp = self.get_clock().now().nanoseconds
 
-        ascend_time = 20.0
-        target_altitude = 1.2
-        initial_altitude = 1.0
-        climb_rate = (target_altitude - initial_altitude) / ascend_time
+        # Mission parameters
+        ASCEND_TIME = 20.0    # seconds to climb to hover altitude
+        HOVER_TIME = 5.0      # seconds to stabilize before circle
+        HOVER_ALT = 1.0       # meters
+        CIRCLE_R = 0.5        # meters
+        CIRCLE_W = 0.5        # rad/s  (period ~12.6 s)
 
-        z = initial_altitude + climb_rate * t
-        zdot = climb_rate
-        zddot = 0.0
+        t_fly = t - self.startup_delay
 
-        trajectory_msg.position = Vector3(x=0.0, y=0.0, z=z)
-        trajectory_msg.velocity = Vector3(x=0.0, y=0.0, z=zdot)
-        trajectory_msg.acceleration = Vector3(x=0.0, y=0.0, z=zddot)
-        trajectory_msg.jerk = Vector3(x=0.0, y=0.0, z=0.0)
-        trajectory_msg.snap = Vector3(x=0.0, y=0.0, z=0.0)
+        if t_fly < ASCEND_TIME:
+            # Phase 1: climb from ground to hover altitude
+            climb_rate = HOVER_ALT / ASCEND_TIME
+            z = climb_rate * t_fly
+            pos = Vector3(x=0.0, y=0.0, z=z)
+            vel = Vector3(x=0.0, y=0.0, z=climb_rate)
+            acc = Vector3(x=0.0, y=0.0, z=0.0)
+            jerk = Vector3(x=0.0, y=0.0, z=0.0)
+            snap = Vector3(x=0.0, y=0.0, z=0.0)
+
+        elif t_fly < ASCEND_TIME + HOVER_TIME:
+            # Phase 2: hold hover altitude and let oscillations die out
+            pos = Vector3(x=0.0, y=0.0, z=HOVER_ALT)
+            vel = Vector3(x=0.0, y=0.0, z=0.0)
+            acc = Vector3(x=0.0, y=0.0, z=0.0)
+            jerk = Vector3(x=0.0, y=0.0, z=0.0)
+            snap = Vector3(x=0.0, y=0.0, z=0.0)
+
+        else:
+            # Phase 3: horizontal circle at hover altitude
+            # x(t) = R*cos(w*t),  y(t) = R*sin(w*t)
+            tc = t_fly - ASCEND_TIME - HOVER_TIME
+            R = CIRCLE_R
+            w = CIRCLE_W
+            c = math.cos(w * tc)
+            s = math.sin(w * tc)
+
+            pos = Vector3(x=R * c,          y=R * s,          z=HOVER_ALT)
+            vel = Vector3(x=-R * w * s,     y=R * w * c,      z=0.0)
+            acc = Vector3(x=-R * w**2 * c,  y=-R * w**2 * s,  z=0.0)
+            jerk = Vector3(x=R * w**3 * s,  y=-R * w**3 * c,  z=0.0)
+            snap = Vector3(x=R * w**4 * c,  y=R * w**4 * s,   z=0.0)
+
+        trajectory_msg.position = pos
+        trajectory_msg.velocity = vel
+        trajectory_msg.acceleration = acc
+        trajectory_msg.jerk = jerk
+        trajectory_msg.snap = snap
 
         trajectory_msg.yaw = 0.0
         trajectory_msg.yaw_dot = 0.0

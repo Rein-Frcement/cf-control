@@ -13,7 +13,7 @@ class Controller(Node):
     def __init__(self):
         super().__init__('drone_controller')
 
-        self.declare_parameter('mass', 0.2)
+        self.declare_parameter('mass', 0.025)
         self.declare_parameter('gravity', 9.81)
         self.mass = self.get_parameter('mass').value
         self.g = self.get_parameter('gravity').value
@@ -27,6 +27,11 @@ class Controller(Node):
         self.current_vel = np.zeros(3)
         self.current_R = np.eye(3)
         self.current_omega = np.zeros(3)
+
+        self.e_p = np.zeros(3)
+        self.e_v = np.zeros(3)
+        self.e_R = np.zeros(3)
+        self.e_omega = np.zeros(3)
 
         # CSV logging setup
         log_dir = '/home/developer/ros2_ws/logs'
@@ -219,7 +224,7 @@ class Controller(Node):
             e_R = np.array([e_R_matrix[2, 1], e_R_matrix[0, 2], e_R_matrix[1, 0]])
 
             self.e_R = e_R
-            h_omega = (m / thrust) * (jerk_T - np.dot(z_B_des, jerk_T) * z_B_des)
+            h_omega = (m / F_norm) * (jerk_T - np.dot(z_B_des, jerk_T) * z_B_des)
 
             p_des = -np.dot(h_omega, y_B_des)
             q_des = np.dot(h_omega, x_B_des)
