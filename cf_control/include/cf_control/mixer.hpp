@@ -24,6 +24,7 @@
 #include <actuator_msgs/msg/actuators.hpp>
 #include <cf_control_msgs/msg/thrust_and_torque.hpp>
 #include <mutex>
+#include <nav_msgs/msg/odometry.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp_components/register_node_macro.hpp>
 
@@ -61,11 +62,16 @@ private:
    * @param msg The incoming message containing the desired thrust and torque values.
    */
   void control_command_callback(const cf_control_msgs::msg::ThrustAndTorque::SharedPtr msg);
+  void odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg);
+
+  // ROS interfaces (additional)
+  rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr odom_subscriber_;
 
   // Mixer parameters
   double k_thrust_;
   double k_torque_;
   double k_drag_;
+  double max_motor_speed_;
 
   // Input control commands (to be updated by the subscriber callback)
   double desired_thrust_;
@@ -73,6 +79,15 @@ private:
   double desired_pitch_torque_;
   double desired_yaw_torque_;
   std::mutex input_mutex_;
+
+  // Current position (from odometry)
+  double pos_x_{0.0};
+  double pos_y_{0.0};
+  double pos_z_{0.0};
+  std::mutex odom_mutex_;
+
+  // Log throttle counter (log every N process() calls)
+  int log_counter_{0};
 };
 }  // namespace cf
 }  // namespace evs

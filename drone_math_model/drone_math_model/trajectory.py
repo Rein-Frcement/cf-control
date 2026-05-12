@@ -19,7 +19,7 @@ class TrajectoryPublisher(Node):
         self.start_time = self.get_clock().now()
         self.startup_delay = 10.0
         self.started = False
-        self.timer = self.create_timer(0.1, self.publish_messages)
+        self.timer = self.create_timer(0.01, self.publish_messages)
 
         self.get_logger().info(
             'drone_trajectory_publisher node started, waiting 10s before sending commands'
@@ -39,17 +39,15 @@ class TrajectoryPublisher(Node):
         trajectory_msg = Flat()
         trajectory_msg.timestamp = self.get_clock().now().nanoseconds
 
-        # Mission parameters
-        ASCEND_TIME = 20.0    # seconds to climb to hover altitude
-        HOVER_TIME = 5.0      # seconds to stabilize before circle
-        HOVER_ALT = 1.0       # meters
-        CIRCLE_R = 0.5        # meters
-        CIRCLE_W = 0.5        # rad/s  (period ~12.6 s)
+        ASCEND_TIME = 20.0
+        HOVER_TIME = 5.0
+        HOVER_ALT = 1.0
+        CIRCLE_R = 0.5
+        CIRCLE_W = 0.5
 
         t_fly = t - self.startup_delay
 
         if t_fly < ASCEND_TIME:
-            # Phase 1: climb from ground to hover altitude
             climb_rate = HOVER_ALT / ASCEND_TIME
             z = climb_rate * t_fly
             pos = Vector3(x=0.0, y=0.0, z=z)
@@ -59,7 +57,6 @@ class TrajectoryPublisher(Node):
             snap = Vector3(x=0.0, y=0.0, z=0.0)
 
         elif t_fly < ASCEND_TIME + HOVER_TIME:
-            # Phase 2: hold hover altitude and let oscillations die out
             pos = Vector3(x=0.0, y=0.0, z=HOVER_ALT)
             vel = Vector3(x=0.0, y=0.0, z=0.0)
             acc = Vector3(x=0.0, y=0.0, z=0.0)
@@ -67,8 +64,6 @@ class TrajectoryPublisher(Node):
             snap = Vector3(x=0.0, y=0.0, z=0.0)
 
         else:
-            # Phase 3: horizontal circle at hover altitude
-            # x(t) = R*cos(w*t),  y(t) = R*sin(w*t)
             tc = t_fly - ASCEND_TIME - HOVER_TIME
             R = CIRCLE_R
             w = CIRCLE_W
@@ -94,10 +89,10 @@ class TrajectoryPublisher(Node):
         self.trajectory_publisher.publish(trajectory_msg)
 
         regulator_msg = ContorlerParameters()
-        regulator_msg.kp = Vector3(x=1.0, y=1.0, z=1.5)
-        regulator_msg.kv = Vector3(x=0.5, y=0.5, z=0.8)
-        regulator_msg.kr = Vector3(x=0.1, y=0.1, z=0.1)
-        regulator_msg.kw = Vector3(x=0.01, y=0.01, z=0.01)
+        regulator_msg.kp = Vector3(x=0.2, y=0.2, z=1.9)
+        regulator_msg.kv = Vector3(x=0.2, y=0.2, z=0.7)
+        regulator_msg.kr = Vector3(x=3.73e-3, y=3.73e-3, z=2.0e-3)
+        regulator_msg.kw = Vector3(x=3.5e-4,  y=3.5e-4,  z=3.0e-4)
 
         self.regulator_publisher.publish(regulator_msg)
 

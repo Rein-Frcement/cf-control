@@ -37,9 +37,9 @@ class DroneNode(Node):
 
         self.publisher_ = self.create_publisher(Float64MultiArray, 'drone_state', 10)
 
-        self.declare_parameter('mass', 1.0)
+        self.declare_parameter('mass', 0.025)
         self.declare_parameter('gravity', 9.81)
-        self.declare_parameter('inertia', [1.0, 1.0, 1.0])
+        self.declare_parameter('inertia', [16.571710e-6, 16.655602e-6, 29.261652e-6])
         self.declare_parameter('initial_position', [0.0, 0.0, 0.0])
         self.declare_parameter('initial_velocity', [0.0, 0.0, 0.0])
         self.declare_parameter('initial_quaternion', [1.0, 0.0, 0.0, 0.0])
@@ -73,6 +73,12 @@ class DroneNode(Node):
             return
 
         self.last_timestamp = msg.timestamp
+
+        if not np.all(np.isfinite(self.omega)) or not np.all(np.isfinite(self.v)):
+            self.omega = np.zeros(3)
+            self.v = np.zeros(3)
+            self.r = np.zeros(3)
+            self.q = np.array([1.0, 0.0, 0.0, 0.0])
 
         T_val = msg.collective_thrust
         tau = np.array([msg.torque.x, msg.torque.y, msg.torque.z])

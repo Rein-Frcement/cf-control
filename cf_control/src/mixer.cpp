@@ -21,6 +21,7 @@
 #include "cf_control/mixer.hpp"
 
 #include <cmath>
+#include <nav_msgs/msg/odometry.hpp>
 
 namespace evs
 {
@@ -56,6 +57,9 @@ Mixer::Mixer(const rclcpp::NodeOptions & options)
   control_command_subscriber_ = this->create_subscription<cf_control_msgs::msg::ThrustAndTorque>(
     "/cf_control/control_command", 10,
     std::bind(&Mixer::control_command_callback, this, std::placeholders::_1));
+  odom_subscriber_ = this->create_subscription<nav_msgs::msg::Odometry>(
+    "/crazyflie/odom", 10,
+    std::bind(&Mixer::odom_callback, this, std::placeholders::_1));
 
   // Kick off the processing function at the specified rate
   process_timer_ = this->create_wall_timer(
@@ -115,9 +119,29 @@ void Mixer::process()
   motor_command.velocity = {motor_speed_1, motor_speed_2, motor_speed_3, motor_speed_4};
   motor_command_publisher_->publish(motor_command);
 
-  RCLCPP_INFO(
-    this->get_logger(), "Published motor speeds: [%.2f, %.2f, %.2f, %.2f]", motor_speed_1,
-    motor_speed_2, motor_speed_3, motor_speed_4);
+  // Log at ~10 Hz (process_rate / 20)
+  if (++log_counter_ >= 20) {
+    log_counter_ = 0;
+    double x, y, z;
+    {
+      std::scoped_lock lock(odom_mutex_);
+      x = pos_x_;
+      y = pos_y_;
+      z = pos_z_;
+    }
+    RCLCPP_INFO(
+      this->get_logger(),
+      "pos [%.3f, %.3f, %.3f]  motors [%.1f, %.1f, %.1f, %.1f] rad/s",
+      x, y, z, motor_speed_1, motor_speed_2, motor_speed_3, motor_speed_4);
+  }
+}
+
+void Mixer::odom_callback(const nav_msgs::msg::Odometry::SharedPtr msg)
+{
+  std::scoped_lock lock(odom_mutex_);
+  pos_x_ = msg->pose.pose.position.x;
+  pos_y_ = msg->pose.pose.position.y;
+  pos_z_ = msg->pose.pose.position.z;
 }
 }  // namespace cf
 }  // namespace evs

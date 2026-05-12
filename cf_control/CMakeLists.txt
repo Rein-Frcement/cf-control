@@ -11,10 +11,11 @@ find_package(rclcpp REQUIRED)
 find_package(rclcpp_components REQUIRED)
 find_package(actuator_msgs REQUIRED)
 find_package(cf_control_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 
 # libraries
 add_library(mixer_lib SHARED src/mixer.cpp)
-ament_target_dependencies(mixer_lib rclcpp rclcpp_components actuator_msgs cf_control_msgs)
+ament_target_dependencies(mixer_lib rclcpp rclcpp_components actuator_msgs cf_control_msgs nav_msgs)
 target_include_directories(mixer_lib PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
