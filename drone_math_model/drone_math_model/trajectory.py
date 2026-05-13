@@ -70,11 +70,11 @@ class TrajectoryPublisher(Node):
             c = math.cos(w * tc)
             s = math.sin(w * tc)
 
-            pos = Vector3(x=R * c,          y=R * s,          z=HOVER_ALT)
-            vel = Vector3(x=-R * w * s,     y=R * w * c,      z=0.0)
-            acc = Vector3(x=-R * w**2 * c,  y=-R * w**2 * s,  z=0.0)
-            jerk = Vector3(x=R * w**3 * s,  y=-R * w**3 * c,  z=0.0)
-            snap = Vector3(x=R * w**4 * c,  y=R * w**4 * s,   z=0.0)
+            pos = Vector3(x=R * c, y=R * s, z=HOVER_ALT)
+            vel = Vector3(x=-R * w * s, y=R * w * c, z=0.0)
+            acc = Vector3(x=-R * w**2 * c, y=-R * w**2 * s, z=0.0)
+            jerk = Vector3(x=R * w**3 * s, y=-R * w**3 * c, z=0.0)
+            snap = Vector3(x=R * w**4 * c, y=R * w**4 * s, z=0.0)
 
         trajectory_msg.position = pos
         trajectory_msg.velocity = vel
@@ -92,7 +92,7 @@ class TrajectoryPublisher(Node):
         regulator_msg.kp = Vector3(x=0.2, y=0.2, z=1.9)
         regulator_msg.kv = Vector3(x=0.2, y=0.2, z=0.7)
         regulator_msg.kr = Vector3(x=3.73e-3, y=3.73e-3, z=2.0e-3)
-        regulator_msg.kw = Vector3(x=3.5e-4,  y=3.5e-4,  z=3.0e-4)
+        regulator_msg.kw = Vector3(x=3.5e-4, y=3.5e-4, z=3.0e-4)
 
         self.regulator_publisher.publish(regulator_msg)
 
