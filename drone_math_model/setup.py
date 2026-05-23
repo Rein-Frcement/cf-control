@@ -29,6 +29,7 @@ setup(
             'drone_flat_to_state_and_torque_node = drone_math_model.drone_flat_to_state:main',
             'drone_trajectory_publisher = drone_math_model.trajectory:main',
             'drone_controller = drone_math_model.control:main',
+            'drone_mpc = drone_math_model.mpc:main',
         ],
     },
 )
