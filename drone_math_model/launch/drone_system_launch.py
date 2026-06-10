@@ -33,8 +33,8 @@ def generate_launch_description():
             ),
             Node(
                 package='drone_math_model',
-                executable='drone_controller',
-                name='drone_controller',
+                executable='drone_mpc',
+                name='drone_mpc',
                 output='screen',
             ),
             Node(

@@ -3,19 +3,18 @@ import os
 
 import numpy as np
 import rclpy
+from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from casadi import SX, vertcat
 from nav_msgs.msg import Odometry
 from rclpy.node import Node
 
-from acados_template import AcadosModel, AcadosOcp, AcadosOcpSolver
 from cf_control_msgs.msg import ContorlerParameters, Flat, ThrustAndTorque
-
 
 MASS = 0.025
 GRAVITY = 9.81
 KF = 1.28192e-8
 OMEGA_MAX = 2618.0
-F_MAX = 4 * KF * OMEGA_MAX ** 2
+F_MAX = 4 * KF * OMEGA_MAX**2
 A_MAX = F_MAX / MASS
 A_MAX_Z_UP = A_MAX - GRAVITY
 A_MAX_XY = GRAVITY * math.tan(math.radians(30))
@@ -48,14 +47,12 @@ class MPCController(Node):
 
         self.solver = self._build_solver()
 
-        self.pub = self.create_publisher(
-            ThrustAndTorque, '/cf_control/control_command', 10)
+        self.pub = self.create_publisher(ThrustAndTorque, '/cf_control/control_command', 10)
+        self.create_subscription(Flat, 'drone_trajectory', self._traj_cb, 10)
+        self.create_subscription(Odometry, '/crazyflie/odom', self._odom_cb, 10)
         self.create_subscription(
-            Flat, 'drone_trajectory', self._traj_cb, 10)
-        self.create_subscription(
-            Odometry, '/crazyflie/odom', self._odom_cb, 10)
-        self.create_subscription(
-            ContorlerParameters, 'drone_regulator_parameters', self._params_cb, 10)
+            ContorlerParameters, 'drone_regulator_parameters', self._params_cb, 10
+        )
 
         self.get_logger().info('MPC controller started.')
 
@@ -76,24 +73,22 @@ class MPCController(Node):
         ocp.model = model
         ocp.dims.N = self.N
 
-        Q = np.diag([10.0, 10.0, 15.0,
-                     2.0,  2.0,  3.0])
-        R = np.diag([0.5,  0.5,  0.5])
+        Q = np.diag([100.0, 100.0, 100.0, 5.0, 5.0, 8.0])
+        R = np.diag([0.1, 0.1, 0.1])
 
         ocp.cost.cost_type = 'LINEAR_LS'
         ocp.cost.cost_type_e = 'LINEAR_LS'
 
-        ocp.cost.Vx = np.vstack([np.eye(nx),      np.zeros((nu, nx))])
+        ocp.cost.Vx = np.vstack([np.eye(nx), np.zeros((nu, nx))])
         ocp.cost.Vu = np.vstack([np.zeros((nx, nu)), np.eye(nu)])
-        ocp.cost.W = np.block([[Q, np.zeros((nx, nu))],
-                               [np.zeros((nu, nx)), R]])
+        ocp.cost.W = np.block([[Q, np.zeros((nx, nu))], [np.zeros((nu, nx)), R]])
         ocp.cost.Vx_e = np.eye(nx)
         ocp.cost.W_e = 5.0 * Q
         ocp.cost.yref = np.zeros(ny)
         ocp.cost.yref_e = np.zeros(nx)
 
         ocp.constraints.lbu = np.array([-A_MAX_XY, -A_MAX_XY, -GRAVITY])
-        ocp.constraints.ubu = np.array([ A_MAX_XY,  A_MAX_XY,  A_MAX_Z_UP])
+        ocp.constraints.ubu = np.array([A_MAX_XY, A_MAX_XY, A_MAX_Z_UP])
         ocp.constraints.idxbu = np.array([0, 1, 2])
         ocp.constraints.x0 = np.zeros(nx)
 
@@ -109,23 +104,29 @@ class MPCController(Node):
         return AcadosOcpSolver(ocp, json_file=json_path)
 
     def _odom_cb(self, msg):
-        self.current_pos = np.array([
-            msg.pose.pose.position.x,
-            msg.pose.pose.position.y,
-            msg.pose.pose.position.z,
-        ])
-        self.current_vel = np.array([
-            msg.twist.twist.linear.x,
-            msg.twist.twist.linear.y,
-            msg.twist.twist.linear.z,
-        ])
+        self.current_pos = np.array(
+            [
+                msg.pose.pose.position.x,
+                msg.pose.pose.position.y,
+                msg.pose.pose.position.z,
+            ]
+        )
+        self.current_vel = np.array(
+            [
+                msg.twist.twist.linear.x,
+                msg.twist.twist.linear.y,
+                msg.twist.twist.linear.z,
+            ]
+        )
         q = msg.pose.pose.orientation
         self.current_R = self._quat_to_R([q.x, q.y, q.z, q.w])
-        self.current_omega = np.array([
-            msg.twist.twist.angular.x,
-            msg.twist.twist.angular.y,
-            msg.twist.twist.angular.z,
-        ])
+        self.current_omega = np.array(
+            [
+                msg.twist.twist.angular.x,
+                msg.twist.twist.angular.y,
+                msg.twist.twist.angular.z,
+            ]
+        )
         self._odom_received = True
 
     def _traj_cb(self, msg):
@@ -148,10 +149,10 @@ class MPCController(Node):
         try:
             x0 = np.concatenate([self.current_pos, self.current_vel])
 
-            p_ref = np.array([traj.position.x,     traj.position.y,     traj.position.z])
-            v_ref = np.array([traj.velocity.x,     traj.velocity.y,     traj.velocity.z])
+            p_ref = np.array([traj.position.x, traj.position.y, traj.position.z])
+            v_ref = np.array([traj.velocity.x, traj.velocity.y, traj.velocity.z])
             a_ref = np.array([traj.acceleration.x, traj.acceleration.y, traj.acceleration.z])
-            j_ref = np.array([traj.jerk.x,         traj.jerk.y,         traj.jerk.z])
+            j_ref = np.array([traj.jerk.x, traj.jerk.y, traj.jerk.z])
 
             # Set initial state as equality constraint and warm-start guess
             self.solver.set(0, 'lbx', x0)
@@ -160,7 +161,7 @@ class MPCController(Node):
 
             for k in range(self.N):
                 tau = k * self.dt
-                p_k = p_ref + v_ref * tau + 0.5 * a_ref * tau**2 + (1.0/6.0) * j_ref * tau**3
+                p_k = p_ref + v_ref * tau + 0.5 * a_ref * tau**2 + (1.0 / 6.0) * j_ref * tau**3
                 v_k = v_ref + a_ref * tau + 0.5 * j_ref * tau**2
                 a_k = a_ref + j_ref * tau
                 self.solver.set(k, 'yref', np.concatenate([p_k, v_k, a_k]))
@@ -168,15 +169,15 @@ class MPCController(Node):
                 self.solver.set(k + 1, 'x', np.concatenate([p_k, v_k]))
 
             tau_N = self.N * self.dt
-            p_N = p_ref + v_ref * tau_N + 0.5 * a_ref * tau_N**2 + (1.0/6.0) * j_ref * tau_N**3
+            p_N = p_ref + v_ref * tau_N + 0.5 * a_ref * tau_N**2 + (1.0 / 6.0) * j_ref * tau_N**3
             v_N = v_ref + a_ref * tau_N + 0.5 * j_ref * tau_N**2
             self.solver.set(self.N, 'yref', np.concatenate([p_N, v_N]))
 
             status = self.solver.solve()
             if status not in (0, 2):
                 self.get_logger().warn(
-                    f'MPC solver failed, status={status}, '
-                    f'x0={x0}, p_ref={p_ref}')
+                    f'MPC solver failed, status={status}, x0={x0}, p_ref={p_ref}'
+                )
                 return 0.0, [0.0, 0.0, 0.0]
 
             u_acc = self.solver.get(0, 'u')
@@ -216,11 +217,13 @@ class MPCController(Node):
             self.e_R = np.array([eR_mat[2, 1], eR_mat[0, 2], eR_mat[1, 0]])
             jerk_T = np.array([traj.jerk.x, traj.jerk.y, traj.jerk.z])
             h_omega = (m / F_norm) * (jerk_T - np.dot(z_B_des, jerk_T) * z_B_des)
-            omega_des = np.array([
-                -np.dot(h_omega, y_B_des),
-                 np.dot(h_omega, x_B_des),
-                 traj.yaw_dot * np.dot(z_W, z_B_des),
-            ])
+            omega_des = np.array(
+                [
+                    -np.dot(h_omega, y_B_des),
+                    np.dot(h_omega, x_B_des),
+                    traj.yaw_dot * np.dot(z_W, z_B_des),
+                ]
+            )
 
             self.e_omega = self.current_omega - omega_des
 
@@ -233,11 +236,13 @@ class MPCController(Node):
 
     def _quat_to_R(self, quat):
         x, y, z, w = quat
-        return np.array([
-            [1 - 2*(y*y + z*z),  2*(x*y - w*z),    2*(x*z + w*y)],
-            [2*(x*y + w*z),      1 - 2*(x*x + z*z), 2*(y*z - w*x)],
-            [2*(x*z - w*y),      2*(y*z + w*x),     1 - 2*(x*x + y*y)],
-        ])
+        return np.array(
+            [
+                [1 - 2 * (y * y + z * z), 2 * (x * y - w * z), 2 * (x * z + w * y)],
+                [2 * (x * y + w * z), 1 - 2 * (x * x + z * z), 2 * (y * z - w * x)],
+                [2 * (x * z - w * y), 2 * (y * z + w * x), 1 - 2 * (x * x + y * y)],
+            ]
+        )
 
 
 def main(args=None):
